@@ -1,0 +1,25 @@
+# Use an OpenJDK base image
+FROM eclipse-temurin:21-jdk
+
+# Set work directory
+WORKDIR /app
+
+# Copy Maven wrapper and pom.xml
+COPY mvnw .
+COPY .mvn .mvn
+COPY pom.xml .
+
+# Download dependencies
+RUN ./mvnw dependency:go-offline -B
+
+# Copy the full source
+COPY src ./src
+
+# Build the project
+RUN ./mvnw clean package -DskipTests
+
+# Expose port 8080
+EXPOSE 8080
+
+# Run the JAR file
+CMD ["java", "-jar", "target/Login_Services-0.0.1-SNAPSHOT.jar"]
