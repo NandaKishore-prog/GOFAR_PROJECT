@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Travel Companion Sign Up</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Segoe UI", sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #5a7cba, #7f9ac8);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .signup-container {
+      background: #fff;
+      border-radius: 12px;
+      padding: 40px 30px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .signup-container h2 {
+      text-align: center;
+      color: #7494d1;
+      margin-bottom: 30px;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #769add;
+      font-size: 15px;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      outline: none;
+      font-size: 15px;
+    }
+
+    .signup-btn {
+      width: 100%;
+      padding: 12px;
+      background: #739ff0;
+      border: none;
+      color: white;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .signup-btn:hover {
+      background: #548adc;
+    }
+
+    .extra-links {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .extra-links a {
+      color: #5390d6;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .extra-links a:hover {
+      text-decoration: underline;
+    }
+
+    #loadingSpinner {
+      display: none;
+      text-align: center;
+      margin-top: 20px;
+      font-size: 16px;
+      color: #5a7cba;
+    }
+
+    @media (max-width: 480px) {
+      .signup-container {
+        padding: 30px 20px;
+      }
+
+      .signup-container h2 {
+        font-size: 20px;
+      }
+
+      .input-group label,
+      .input-group input,
+      .signup-btn,
+      .extra-links a {
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="signup-container">
+  <h2>Create Your Account</h2>
+  <form id="signupForm">
+    <div class="input-group">
+      <label for="username">Username</label>
+      <input type="text" id="username" required />
+    </div>
+    <div class="input-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" required />
+    </div>
+    <div class="input-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" required />
+    </div>
+    <div class="input-group">
+      <label for="confirm-password">Confirm Password</label>
+      <input type="password" id="confirm-password" required />
+    </div>
+    <button type="submit" class="signup-btn">Sign Up</button>
+  </form>
+
+  <!-- 🔄 Spinner Display -->
+  <div id="loadingSpinner">⏳ Please wait...</div>
+
+  <div class="extra-links">
+    <p>Already have an account? <a href="/login">Login</a></p>
+  </div>
+</div>
+
+<script>
+  const form = document.getElementById("signupForm");
+  const spinner = document.getElementById("loadingSpinner");
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const username = document.getElementById('username').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
+
+    if (password !== confirmPassword) {
+      alert("❌ Passwords do not match!");
+      return;
+    }
+
+    spinner.style.display = "block"; // Show loading spinner
+
+    const jsonData = JSON.stringify({ username, email, password });
+
+    fetch('/api/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: jsonData
+    })
+    .then(async response => {
+      const message = await response.text();
+      spinner.style.display = "none"; // Hide spinner
+
+      if (response.ok) {
+        alert("✅ Signup successful!");
+        window.location.href = '/otp';
+      } else if (message === "EMAIL_EXISTS") {
+        alert("❌ Email already registered.");
+      } else if (message === "USERNAME_EXISTS") {
+        alert("❌ Username already taken.");
+      } else {
+        alert("❌ Signup failed. Please try again.");
+      }
+    })
+    .catch(error => {
+      spinner.style.display = "none"; // Hide spinner
+      console.error("Error:", error);
+      alert("❌ Something went wrong.");
+    });
+  });
+</script>
+</body>
+</html>

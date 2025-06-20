@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OTP Verification</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Segoe UI", sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #5a7cba, #7f9ac8);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .otp-container {
+      background: #fff;
+      border-radius: 12px;
+      padding: 40px 30px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .otp-container h2 {
+      text-align: center;
+      color: #7494d1;
+      margin-bottom: 20px;
+    }
+
+    .otp-container p {
+      text-align: center;
+      font-size: 14px;
+      color: #555;
+      margin-bottom: 25px;
+    }
+
+    .input-group {
+      margin-bottom: 25px;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #769add;
+      font-size: 15px;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      outline: none;
+      font-size: 16px;
+      text-align: center;
+      letter-spacing: 8px;
+    }
+
+    .verify-btn {
+      width: 100%;
+      padding: 12px;
+      background: #739ff0;
+      border: none;
+      color: white;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .verify-btn:hover {
+      background: #548adc;
+    }
+
+    .resend-link {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .resend-link a {
+      color: #5390d6;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .resend-link a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 480px) {
+      .otp-container {
+        padding: 30px 20px;
+      }
+
+      .otp-container h2 {
+        font-size: 20px;
+      }
+
+      .input-group input {
+        font-size: 16px;
+        letter-spacing: 6px;
+      }
+
+      .verify-btn,
+      .resend-link a {
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="otp-container">
+    <h2>OTP Verification</h2>
+    <p>Please enter the 4-digit OTP sent to your email</p>
+  <form action="/otp" method="POST">      <div class="input-group">
+        <label for="otp">Enter OTP</label>
+        <input type="text" name="otp" id="otp" maxlength="4" placeholder="----" required />
+      </div>
+   
+  <button type="submit" class="verify-btn">Verify OTP</button>
+
+    </form>
+    <div class="resend-link">
+      <p>Didn't get the code? <a href="#">Resend</a></p>
+    </div>
+  </div>
+</body>
+</html>
