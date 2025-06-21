@@ -1,5 +1,5 @@
 spring:
   profiles:
-    active: local  # Default profile if none is set
+    active: dev  # Default profile if none is set
 
 # You can put very generic or default config here
