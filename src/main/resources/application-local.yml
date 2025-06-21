@@ -1,11 +1,18 @@
+# src/main/resources/application-local.yml
+
 server:
   error:
     include-message: always
     include-binding-errors: always
 
 spring:
+  config:
+    activate:
+      on-profile: local  # ✅ Correct way in Spring Boot 2.4+
+
+
   datasource:
-    url: jdbc:mysql://localhost:3306/Userdb
+    url: jdbc:mysql://host.docker.internal:3306/Userdb
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -32,6 +39,6 @@ spring:
             enable: true
 
   session:
-    store-type: jdbc        # Store sessions in the database
+    store-type: jdbc
     jdbc:
-      initialize-schema: always   # Auto-create SPRING_SESSION tables if not already present
+      initialize-schema: always
