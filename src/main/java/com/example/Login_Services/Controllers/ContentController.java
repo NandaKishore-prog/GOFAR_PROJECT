@@ -22,41 +22,49 @@ public class ContentController {
 
     @Autowired
     private EmailOtpService emailOtpService;
-    Authentication auth;
+
     @Autowired
     private MyAppUserRepository myAppUserRepository;
-    @GetMapping("/login")
-    public String loginPage(HttpServletRequest request) {
-        auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
-            return "redirect:/home";
-        }
-        return "index";
+
+    private boolean isAuthenticated() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken);
     }
 
+    private Optional<MyAppUser> getLoggedInUser() {
+        if (!isAuthenticated()) return Optional.empty();
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        return myAppUserRepository.findByUsername(username);
+    }
+
+    @GetMapping("/login")
+    public String loginPage() {
+        return isAuthenticated() ? "redirect:/home" : "index";
+    }
 
     @GetMapping("/signup")
-    public String signuppage(HttpServletRequest request) {
-        auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
-            return "redirect:/home";
-        }
-        return "signup";
+    public String signuppage() {
+        return isAuthenticated() ? "redirect:/home" : "signup";
     }
 
-
     @GetMapping("/home")
-    public String dashboard(HttpSession session) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();//user tracking made by nandhu
-        String username = auth.getName(); //  username user tracking made by nandhu
-        System.out.println(username);
-        Optional<MyAppUser> user=myAppUserRepository.findByUsername(username);
-        if (user != null) {
-            System.out.println( ("Welcome back, " + user.get().getEmail()));
-        } else {
-            System.out.println( "Please login first");
-        }
+    public String dashboard() {
+        Optional<MyAppUser> user = getLoggedInUser();
+        user.ifPresentOrElse(
+                u -> System.out.println("Welcome back, " + u.getEmail()),
+                () -> System.out.println("Please login first")
+        );
         return "home";
+    }
+
+    @GetMapping("/map")
+    public String map() {
+        Optional<MyAppUser> user = getLoggedInUser();
+        user.ifPresentOrElse(
+                u -> System.out.println("Welcome back, " + u.getEmail()),
+                () -> System.out.println("Please login first")
+        );
+        return "map";
     }
 
     @GetMapping("/otp")
@@ -90,5 +98,4 @@ public class ContentController {
             response.sendRedirect("/otp?error=invalid");
         }
     }
-
 }
