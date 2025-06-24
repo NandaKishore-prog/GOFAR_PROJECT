@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GOFAR Map Route Finder</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html {
+          height: 100%;
+          margin: 0;
+        }
+        #map {
+          height: 100%;
+          width: 100%;
+        }
+        .search-container {
+          position: absolute;
+          top: 10px;
+          left: 10px;
+          background: white;
+          padding: 10px;
+          z-index: 1000;
+          border-radius: 8px;
+          box-shadow: 0 0 5px #aaa;
+        }
+        .input-group {
+          display: flex;
+          align-items: center;
+          margin-bottom: 5px;
+        }
+        input[type="text"] {
+          width: 180px;
+          padding: 4px;
+        }
+        #bottom-note {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: #fff3cd;
+  color: #856404;
+  padding: 10px 20px;
+  font-size: 14px;
+  border-top: 2px solid #ffeeba;
+  box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+  font-family: sans-serif;
+  z-index: 999;
+  text-align: center;
+}
+
+        button {
+          margin-left: 5px;
+          padding: 5px 8px;
+          cursor: pointer;
+        }
+        .results {
+          background: #fff;
+          max-height: 100px;
+          overflow-y: auto;
+          border: 1px solid #ccc;
+          margin-bottom: 5px;
+        }
+        .results div {
+          padding: 5px;
+          cursor: pointer;
+        }
+        .results div:hover {
+          background: #f0f0f0;
+        }
+        #distance {
+          font-weight: bold;
+          color: #2a2;
+          margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+<div class="search-container">
+    <!-- Map Click Selection -->
+    <div style="margin-bottom: 8px;">
+        <label>
+            <input type="radio" name="clickMode" value="pickup" checked /> Set Pickup
+        </label>
+        <label style="margin-left: 10px;">
+            <input type="radio" name="clickMode" value="destination" /> Set Destination
+        </label>
+    </div>
+    <div id="bottom-note">
+        <strong>Note:</strong> If the location name doesn't appear even after typing the full name, please select the point by clicking on the map.
+    </div>
+
+    <div class="input-group">
+        <input type="text" id="pickup" placeholder="Pickup (Current Location by default)" autocomplete="off" />
+        <button onclick="setCurrentLocation(true)">📍</button>
+    </div>
+    <div class="results" id="pickupResults"></div>
+
+    <input type="text" id="destination" placeholder="Enter destination" autocomplete="off" />
+    <div class="results" id="destinationResults"></div>
+    <div id="distance"></div>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const tamilNaduBounds = [
+      [8.0, 76.5],
+      [13.7, 80.5]
+    ];
+
+    let map = L.map('map', {
+      zoomControl: true,
+      maxBounds: tamilNaduBounds,
+      minZoom: 7
+    });
+
+    map.zoomControl.setPosition('bottomright');
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: 'Map data © OpenStreetMap contributors'
+    }).addTo(map);
+
+    let pickupMarker, destMarker, routeLine;
+
+    // Set current location as pickup by default on load
+    window.onload = () => {
+      setCurrentLocation(false);
+    };
+
+    function setCurrentLocation(forceReplaceInput) {
+      navigator.geolocation.getCurrentPosition((position) => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+
+        if (pickupMarker) map.removeLayer(pickupMarker);
+        pickupMarker = L.marker([lat, lon]).addTo(map).bindPopup("Current Location").openPopup();
+        pickupMarker.coords = [lon, lat];
+
+        map.setView([lat, lon], 14);
+
+        if (forceReplaceInput || !document.getElementById('pickup').value) {
+          document.getElementById('pickup').value = "Current Location";
+        }
+
+        if (destMarker) drawRoute(pickupMarker.coords, destMarker.coords);
+      }, (err) => {
+        alert("Geolocation failed: " + err.message);
+        map.fitBounds(tamilNaduBounds);
+      });
+    }
+
+    async function search(query, callback) {
+      let res = await fetch(`https://photon.komoot.io/api/?q=${query}&limit=5`);
+      let data = await res.json();
+      callback(data.features);
+    }
+
+    function setResults(resultsDiv, items, clickHandler) {
+      resultsDiv.innerHTML = '';
+
+      const inputValue = resultsDiv.id.includes("pickup")
+        ? document.getElementById("pickup").value.trim().toLowerCase()
+        : document.getElementById("destination").value.trim().toLowerCase();
+
+      const filtered = items.filter(item =>
+        item.properties.state &&
+        item.properties.state.toLowerCase().includes("tamil nadu") &&
+        item.properties.name &&
+        item.properties.name.toLowerCase().startsWith(inputValue)
+      );
+
+      if (filtered.length === 0) {
+        resultsDiv.innerHTML = "<div>No matching places in Tamil Nadu</div>";
+        return;
+      }
+
+      filtered.forEach(item => {
+        const name = item.properties.name + ', ' + (item.properties.city || '') + ', ' + item.properties.state;
+        let div = document.createElement('div');
+        div.textContent = name;
+        div.onclick = () => clickHandler(item);
+        resultsDiv.appendChild(div);
+      });
+    }
+
+    async function drawRoute(start, end) {
+      const url = `https://api.openrouteservice.org/v2/directions/driving-car/geojson`;
+      const body = {
+        coordinates: [start, end]
+      };
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Authorization": "5b3ce3597851110001cf62487a0b365baf2f4b849e111de32fc8a075",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      });
+
+      const data = await response.json();
+
+      if (data && data.features && data.features.length > 0) {
+        const geometry = data.features[0].geometry.coordinates;
+        const distance = data.features[0].properties.summary.distance / 1000;
+
+        if (routeLine) map.removeLayer(routeLine);
+        routeLine = L.polyline(geometry.map(coord => [coord[1], coord[0]]), { color: 'blue' }).addTo(map);
+
+        document.getElementById('distance').innerText = `Distance: ${distance.toFixed(2)} km`;
+        map.fitBounds(routeLine.getBounds());
+      } else {
+        alert("Route not found. Check coordinates or API key.");
+      }
+    }
+
+    document.getElementById('pickup').addEventListener('input', (e) => {
+      search(e.target.value, (features) => {
+        setResults(document.getElementById('pickupResults'), features, (item) => {
+          const [lon, lat] = item.geometry.coordinates;
+          if (pickupMarker) map.removeLayer(pickupMarker);
+          pickupMarker = L.marker([lat, lon]).addTo(map).bindPopup("Pickup").openPopup();
+          map.setView([lat, lon], 13);
+          pickupMarker.coords = [lon, lat];
+          document.getElementById('pickup').value = item.properties.name;
+          document.getElementById('pickupResults').innerHTML = '';
+          if (pickupMarker && destMarker) drawRoute(pickupMarker.coords, destMarker.coords);
+        });
+      });
+    });
+
+    document.getElementById('destination').addEventListener('input', (e) => {
+      search(e.target.value, (features) => {
+        setResults(document.getElementById('destinationResults'), features, (item) => {
+          const [lon, lat] = item.geometry.coordinates;
+          if (destMarker) map.removeLayer(destMarker);
+          destMarker = L.marker([lat, lon]).addTo(map).bindPopup("Destination").openPopup();
+          map.setView([lat, lon], 13);
+          destMarker.coords = [lon, lat];
+          document.getElementById('destination').value = item.properties.name;
+          document.getElementById('destinationResults').innerHTML = '';
+          if (pickupMarker && destMarker) drawRoute(pickupMarker.coords, destMarker.coords);
+        });
+      });
+    });
+
+    // Handle clicks on map to set pickup or destination
+ map.on('click', async function(e) {
+  const mode = document.querySelector('input[name="clickMode"]:checked').value;
+  const { lat, lng } = e.latlng;
+
+  try {
+    const response = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}`);
+    const data = await response.json();
+
+    let placeName = `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
+    if (data && data.features && data.features.length > 0) {
+      const props = data.features[0].properties;
+      const parts = [
+        props.name,
+        props.street,
+        props.suburb,
+        props.city,
+        props.state
+      ].filter(Boolean); // remove undefined/null
+
+      // Combine and de-duplicate parts
+      const seen = new Set();
+      placeName = parts.filter(p => {
+        const key = p.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).join(', ');
+    }
+
+    if (mode === 'pickup') {
+      if (pickupMarker) map.removeLayer(pickupMarker);
+      pickupMarker = L.marker([lat, lng]).addTo(map).bindPopup("Pickup").openPopup();
+      pickupMarker.coords = [lng, lat];
+      document.getElementById('pickup').value = placeName;
+    } else {
+      if (destMarker) map.removeLayer(destMarker);
+      destMarker = L.marker([lat, lng]).addTo(map).bindPopup("Destination").openPopup();
+      destMarker.coords = [lng, lat];
+      document.getElementById('destination').value = placeName;
+    }
+
+    if (pickupMarker && destMarker) {
+      drawRoute(pickupMarker.coords, destMarker.coords);
+    }
+  } catch (err) {
+    alert("Error fetching location name: " + err.message);
+  }
+});
+
+</script>
+</body>
+</html>

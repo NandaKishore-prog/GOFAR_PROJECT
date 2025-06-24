@@ -29,4 +29,6 @@ public class MyAppUser {
     @NotBlank
     @Column(nullable = false)
     private String password;
+
+
 }
